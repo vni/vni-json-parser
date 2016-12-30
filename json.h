@@ -21,9 +21,10 @@ typedef enum lexem {
 	L_RBRACE
 } lexem_t;
 
-lexem_t get_next_lexem(FILE *stream);
+lexem_t get_next_lexem(const char **input);
 extern double g_number;
 extern char g_string[];
+extern char *lexem_to_string[];
 
 /*** PARSER ******************************************************************************************************/
 
@@ -46,5 +47,9 @@ typedef struct node {
 		double number;
 	} u;
 } node_t;
+
+extern char *type_to_string[];
+
+node_t *parse_stream(const char **input);
 
 #endif /* JSON_H */
