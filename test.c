@@ -467,13 +467,13 @@ void test_parser_object1(void) {
 	const char *input = "{\"name\" : \"John Doe\"}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT, 0);
-	/*
+	//node_t *expected_root = create_node(T_OBJECT, 0);
 	node_t *expected_root = create_node(T_OBJECT, 1,
 		                              	"name", create_node(T_STRING, "John Doe"));
-										*/
+	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
+	*/
 
 	node_t *root = parse_stream(p);
 
@@ -491,13 +491,18 @@ void test_parser_object2(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"one\"   : 1111, \"two\"  :\n2222}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT, 0);
+	node_t *expected_root = create_node(T_OBJECT, 3,
+			                            "name", create_node(T_STRING, "John Doe"),
+			                            "one", create_node(T_NUMBER, 1111.0),
+										"two", create_node(T_NUMBER, 2222.0));
+	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
 	expected_root->child->next = create_node(T_STRING, "one");
 	expected_root->child->next->child = create_node(T_NUMBER, 1111);
 	expected_root->child->next->next = create_node(T_STRING, "two");
 	expected_root->child->next->next->child = create_node(T_NUMBER, 2222);
+	*/
 
 	node_t *root = parse_stream(p);
 
@@ -515,6 +520,14 @@ void test_parser_object3(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"inner\"  : { \"i1\": 100, \"i2:\":200, \"i3\":{\"ii1\":1111}}}";
 	const char **p = &input;
 
+	node_t *expected_root = create_node(T_OBJECT, 2,
+			                            "name", create_node(T_STRING, "John Doe"),
+										"inner", create_node(T_OBJECT, 3,
+											                  "i1", create_node(T_NUMBER, 100.0),
+															  "i2", create_node(T_NUMBER, 200.0),
+															  "i3", create_node(T_OBJECT, 1,
+																                "ii1", create_node(T_NUMBER, 1111.0))));
+	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	node_t *expected_root = create_node(T_OBJECT, 0);
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
@@ -532,6 +545,7 @@ void test_parser_object3(void) {
 	expected_root->child->next->child->child->next->next->child = create_node(T_OBJECT, 0);
 	expected_root->child->next->child->child->next->next->child->child = create_node(T_STRING, "ii1");
 	expected_root->child->next->child->child->next->next->child->child->child = create_node(T_NUMBER, 1111);
+	*/
 
 	node_t *root = parse_stream(p);
 
@@ -539,6 +553,56 @@ void test_parser_object3(void) {
 		printf("test_parser_object3. Test FAILED.\n");
 	} else {
 		printf("test_parser_object3. Test is PASSED.\n");
+	}
+
+	free_tree(expected_root);
+	free_tree(root);
+}
+
+void test_parser_mixed(void) {
+	const char *input = "[\"one\", 2, true, {\"four\":44, \"five\":[1,2,3,4,5], \"six\":[1,2,{},4,[5]]}, [90, 88]]";
+	const char **p = &input;
+
+	node_t *expected_root = create_node(T_ARRAY, 5,
+			                            create_node(T_STRING, "one"),
+										create_node(T_NUMBER, 2.0),
+										create_node(T_TRUE),
+										create_node(T_OBJECT, 3,
+											        "four", create_node(T_NUMBER, 44.0),
+													"five", create_node(T_ARRAY, 5,
+														                create_node(T_NUMBER, 1.0),
+														                create_node(T_NUMBER, 2.0),
+														                create_node(T_NUMBER, 3.0),
+														                create_node(T_NUMBER, 4.0),
+														                create_node(T_NUMBER, 5.0)
+													),
+													"six", create_node(T_ARRAY, 5,
+														               create_node(T_NUMBER, 1.0),
+														               create_node(T_NUMBER, 2.0),
+														               create_node(T_OBJECT, 0),
+														               create_node(T_NUMBER, 4.0),
+														               create_node(T_ARRAY, 1,
+																				   create_node(T_NUMBER, 5.0)
+																	   )
+												    )
+									    ),
+									    create_node(T_ARRAY, 2,
+												    create_node(T_NUMBER, 90.0),
+												    create_node(T_NUMBER, 88.0)
+										)
+							);
+
+	node_t *root = parse_stream(p);
+
+	/*
+	printf("expected_root:\n"); dump_tree(expected_root, 0);
+	printf("root:\n"); dump_tree(root, 0);
+	*/
+
+	if (compare_trees(expected_root, root)) {
+		printf("test_parser_mixed. Test FAILED.\n");
+	} else {
+		printf("test_parser_mixed. Test is PASSED.\n");
 	}
 
 	free_tree(expected_root);
@@ -566,6 +630,8 @@ int main(void) {
 	test_parser_object1();
 	test_parser_object2();
 	test_parser_object3();
+	printf("\n");
+	test_parser_mixed();
 	printf("\n");
 
 	test1();

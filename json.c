@@ -1,7 +1,5 @@
-/* FIXME: Added doxygen documentation to all the functions. */
-
-// TODO: add support for objects
-// TODO: separate to different files. for lexer, for parser
+// FIXME: Added doxygen documentation to all the functions
+// TODO: make create_node(T_NUMBER, XXX) correctly receives double converted from int
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -312,7 +310,6 @@ node_t *create_node(type_t t, ...) {
 			va_end(args);
 			break;
 		}
-					  /*
 		case T_OBJECT: {
 			va_list args;
 			va_start(args, t);
@@ -320,14 +317,13 @@ node_t *create_node(type_t t, ...) {
 			int i;
 			node_t **node = &n->child;
 			for (i = 0; i < nelems; ++i) {
-				(*node)->u.string = xstrdup(va_arg(args, char *));
+				(*node) = create_node(T_STRING, xstrdup(va_arg(args, char *)));
 				(*node)->child = va_arg(args, node_t *);
 				node = &(*node)->next;
 			}
 			va_end(args);
 			break;
 		}
-		*/
 	}
 
 	return n;
@@ -406,7 +402,6 @@ node_t *parse_object(const char **input, lexem_t previous_lexem) {
 	l = get_next_lexem(input);
 	expect(l, L_COLON);
 
-#if 1
 	l = get_next_lexem(input);
 
 	switch (l) {
@@ -423,7 +418,6 @@ node_t *parse_object(const char **input, lexem_t previous_lexem) {
 					   break;
 		/* no default: */
 	}
-#endif
 
 	l = get_next_lexem(input);
 	if (l == L_COMMA) {
@@ -479,6 +473,28 @@ void free_tree(node_t *root) {
 
 /************************************************************************************************/
 
+void dump_object(node_t *root, int indent) {
+	node_t *node;
+	printf("{ ");
+	for (node = root; node; node = node->next) {
+		printf("\"%s\" : ", node->u.string);
+		switch (node->child->type) {
+			case T_NULL: printf("null"); break;
+			case T_FALSE: printf("false"); break;
+			case T_TRUE: printf("true"); break;
+			case T_NUMBER: printf("%.4g", node->child->u.number); break;
+			case T_STRING: printf("\"%s\"", node->child->u.string); break;
+			case T_ARRAY: printf("["); dump_tree(node->child->child, indent); printf("]"); break;
+			case T_OBJECT: printf("{"); /*printf("\"%s\" : \n");*/dump_tree(node->child->child, indent+1); printf("}"); break;
+			default: fprintf(stderr, "WTF???");
+		}
+		if (node->next) {
+			printf(", ");
+		}
+	}
+	printf("} ");
+}
+
 void dump_tree(node_t *root, int indent) {
 	node_t *node;
 	int i;
@@ -494,7 +510,7 @@ void dump_tree(node_t *root, int indent) {
 			case T_NUMBER: printf("%.4g", node->u.number); break;
 			case T_STRING: printf("\"%s\"", node->u.string); break;
 			case T_ARRAY: printf("["); dump_tree(node->child, indent); printf("]"); break;
-			case T_OBJECT: printf("{"); dump_tree(node->child, indent+1); printf("}"); break;
+			case T_OBJECT: dump_object(node->child, indent+1); break;
 			default: fprintf(stderr, "WTF???");
 		}
 		if (node->next)
