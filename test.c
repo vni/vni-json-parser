@@ -4,11 +4,7 @@
 #include <assert.h>
 #include "json.h"
 
-// TODO: test parser. generate the tree from the input string and test it agains generated one
-// TODO: test_number_parser
-// TODO: test_string_parser
-// TODO: test_array_parser
-// TODO: test_object_parser
+// TODO: test_object_parser: create_node(T_OBJECT, ...) should also be able to accept node tree
 
 void test_lexer_numbers(void) {
 	int i;
@@ -319,8 +315,7 @@ void test_parser_array1(void) {
 	const char **p = &input;
 
 	node_t *expected_tree;
-	expected_tree = create_node(T_ARRAY, 0);
-	expected_tree->child = create_node(T_NUMBER, 1);
+	expected_tree = create_node(T_ARRAY, 1, create_node(T_NUMBER, 1));
 
 	node_t *root = parse_stream(p);
 	if (compare_trees(root, expected_tree)) {
@@ -337,15 +332,14 @@ void test_parser_array2(void) {
 	const char *input = "[1  ,           2, \"how are you?\", true, false, null, 10]";
 	const char **p = &input;
 
-	node_t *expected_tree;
-	expected_tree = create_node(T_ARRAY, 0);
-	expected_tree->child = create_node(T_NUMBER, 1);
-	expected_tree->child->next = create_node(T_NUMBER, 2);
-	expected_tree->child->next->next = create_node(T_STRING, "how are you?");
-	expected_tree->child->next->next->next = create_node(T_TRUE);
-	expected_tree->child->next->next->next->next = create_node(T_FALSE);
-	expected_tree->child->next->next->next->next->next = create_node(T_NULL);
-	expected_tree->child->next->next->next->next->next->next = create_node(T_NUMBER, 10);
+	node_t *expected_tree = create_node(T_ARRAY, 7,
+										create_node(T_NUMBER, 1),
+										create_node(T_NUMBER, 2),
+										create_node(T_STRING, "how are you?"),
+										create_node(T_TRUE),
+										create_node(T_FALSE),
+										create_node(T_NULL),
+										create_node(T_NUMBER, 10.0));;
 
 	node_t *root = parse_stream(p);
 	if (compare_trees(root, expected_tree)) {
@@ -362,7 +356,21 @@ void test_parser_array3(void) {
 	const char *input = "[1  ,           2, \"how are you?\", true, [true, true, 666], false, null, 10]";
 	const char **p = &input;
 
-	node_t *expected_tree;
+	node_t *expected_tree = create_node(T_ARRAY, 8,
+										create_node(T_NUMBER, 1),
+										create_node(T_NUMBER, 2),
+										create_node(T_STRING, "how are you?"),
+										create_node(T_TRUE),
+										create_node(T_ARRAY, 3,
+													create_node(T_TRUE),
+													create_node(T_TRUE),
+													create_node(T_NUMBER, 666.0)
+										),
+										create_node(T_FALSE),
+										create_node(T_NULL),
+										create_node(T_NUMBER, 10.0)
+							);
+	/*
 	expected_tree = create_node(T_ARRAY, 0);
 	expected_tree->child = create_node(T_NUMBER, 1);
 	expected_tree->child->next = create_node(T_NUMBER, 2);
@@ -375,6 +383,7 @@ void test_parser_array3(void) {
 	expected_tree->child->next->next->next->next->next = create_node(T_FALSE);
 	expected_tree->child->next->next->next->next->next->next = create_node(T_NULL);
 	expected_tree->child->next->next->next->next->next->next->next = create_node(T_NUMBER, 10);
+	*/
 
 	node_t *root = parse_stream(p);
 	if (compare_trees(root, expected_tree)) {
@@ -458,7 +467,11 @@ void test_parser_object1(void) {
 	const char *input = "{\"name\" : \"John Doe\"}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT);
+	node_t *expected_root = create_node(T_OBJECT, 0);
+	/*
+	node_t *expected_root = create_node(T_OBJECT, 1,
+		                              	"name", create_node(T_STRING, "John Doe"));
+										*/
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
 
@@ -478,7 +491,7 @@ void test_parser_object2(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"one\"   : 1111, \"two\"  :\n2222}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT);
+	node_t *expected_root = create_node(T_OBJECT, 0);
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
 	expected_root->child->next = create_node(T_STRING, "one");
@@ -502,12 +515,12 @@ void test_parser_object3(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"inner\"  : { \"i1\": 100, \"i2:\":200, \"i3\":{\"ii1\":1111}}}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT);
+	node_t *expected_root = create_node(T_OBJECT, 0);
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
 
 	expected_root->child->next = create_node(T_STRING, "inner");
-	expected_root->child->next->child = create_node(T_OBJECT);
+	expected_root->child->next->child = create_node(T_OBJECT, 0);
 
 	expected_root->child->next->child->child = create_node(T_STRING, "i1");
 	expected_root->child->next->child->child->child = create_node(T_NUMBER, 100);
@@ -516,7 +529,7 @@ void test_parser_object3(void) {
 	expected_root->child->next->child->child->next->child = create_node(T_NUMBER, 200);
 
 	expected_root->child->next->child->child->next->next = create_node(T_STRING, "i3");
-	expected_root->child->next->child->child->next->next->child = create_node(T_OBJECT);
+	expected_root->child->next->child->child->next->next->child = create_node(T_OBJECT, 0);
 	expected_root->child->next->child->child->next->next->child->child = create_node(T_STRING, "ii1");
 	expected_root->child->next->child->child->next->next->child->child->child = create_node(T_NUMBER, 1111);
 

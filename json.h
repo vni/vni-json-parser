@@ -54,5 +54,6 @@ node_t *parse_stream(const char **input);
 
 /*** AUXILIARY ***************************************************************************************************/
 node_t *create_node(type_t t, ...);
+void dump_tree(node_t *root, int indent);
 
 #endif /* JSON_H */

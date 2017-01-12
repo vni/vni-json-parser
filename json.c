@@ -307,25 +307,27 @@ node_t *create_node(type_t t, ...) {
 			node_t **node = &n->child;
 			for (i = 0; i < nelems; ++i) {
 				*node = va_arg(args, node_t *);
-				*node = (*node)->next;
+				node = &(*node)->next;
 			}
 			va_end(args);
 			break;
 		}
-#if 0 // not tested
+					  /*
 		case T_OBJECT: {
 			va_list args;
 			va_start(args, t);
 			int nelems = va_arg(args, int);
+			int i;
 			node_t **node = &n->child;
-			for (int i = 0; i < nelems; ++i) {
-				*node = xstrdup(va_arg(args, char *));
-				*node = *node->next;
+			for (i = 0; i < nelems; ++i) {
+				(*node)->u.string = xstrdup(va_arg(args, char *));
+				(*node)->child = va_arg(args, node_t *);
+				node = &(*node)->next;
 			}
 			va_end(args);
 			break;
 		}
-#endif
+		*/
 	}
 
 	return n;
@@ -480,8 +482,6 @@ void free_tree(node_t *root) {
 void dump_tree(node_t *root, int indent) {
 	node_t *node;
 	int i;
-
-	printf("\ndump_tree(root = %p)\n\n", root);
 
 	for (i = 0; i < indent; i++)
 		printf("    ");
