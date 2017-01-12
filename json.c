@@ -279,16 +279,6 @@ void expect(lexem_t l, lexem_t expected) {
 	}
 }
 
-/*
-void expect(FILE *input, lexem_t expected) {
-	lexem_t l = get_next_lexem(input);
-	if (l != expected) {
-		fprintf(stderr, "Expected %s but got: %s\n", lexem_to_string[expected], lexem_to_string[l]);
-		exit(EXIT_FAILURE);
-	}
-}
-*/
-
 node_t *create_node(type_t t, ...) {
 	node_t *n = xcalloc(sizeof(node_t), 1);
 
@@ -309,30 +299,59 @@ node_t *create_node(type_t t, ...) {
 			va_end(args);
 			break;
 		}
+		case T_ARRAY: {
+			va_list args;
+			va_start(args, t);
+			int nelems = va_arg(args, int);
+			int i;
+			node_t **node = &n->child;
+			for (i = 0; i < nelems; ++i) {
+				*node = va_arg(args, node_t *);
+				*node = (*node)->next;
+			}
+			va_end(args);
+			break;
+		}
+#if 0 // not tested
+		case T_OBJECT: {
+			va_list args;
+			va_start(args, t);
+			int nelems = va_arg(args, int);
+			node_t **node = &n->child;
+			for (int i = 0; i < nelems; ++i) {
+				*node = xstrdup(va_arg(args, char *));
+				*node = *node->next;
+			}
+			va_end(args);
+			break;
+		}
+#endif
 	}
 
 	return n;
 }
 
-node_t *parse_object(const char **input);
+node_t *parse_object(const char **input, lexem_t previous_lexem);
 
-node_t *parse_array(const char **input, lexem_t last_lexem) {
+node_t *parse_array(const char **input, lexem_t previous_lexem) {
 	lexem_t l;
 
 	node_t *node = NULL;
 
-	// FIXME: Currently it is a bug here, L_COMMA is alloved at the end of array right before L_RBRACKET
-
 	l = get_next_lexem(input);
 
-	if (last_lexem == L_COMMA && l == L_RBRACKET) {
-		fprintf(stderr, "Input error: L_COMMAN followed by L_RBRACKET.\n");
+	if (previous_lexem == L_COMMA && l == L_RBRACKET) {
+		fprintf(stderr, "Input error: L_COMMA followed by L_RBRACKET.\n");
 		return NULL;
 	}
 
-	if (l == L_RBRACKET) {
-printf("last_lexem == L_LBRACKET, l == L_RBRACKET\n");
+	if (previous_lexem == L_LBRACKET && l == L_RBRACKET) {
 		return NULL;
+	}
+
+	if (previous_lexem != L_LBRACKET && previous_lexem != L_COMMA) {
+		fprintf(stderr, "Parser error: parse_array as previous lexem expects L_LBRACKET or L_COMMA, but got: %s.\n", lexem_to_string[previous_lexem]);
+		exit(EXIT_FAILURE);
 	}
 
 	switch (l) {
@@ -341,11 +360,11 @@ printf("last_lexem == L_LBRACKET, l == L_RBRACKET\n");
 		case L_TRUE: node = create_node(T_TRUE); break;
 		case L_NUMBER: node = create_node(T_NUMBER, g_number); break;
 		case L_STRING: node = create_node(T_STRING, g_string); break;
-		case L_LBRACKET: node = create_node(T_ARRAY);
+		case L_LBRACKET: node = create_node(T_ARRAY, 0);
 						 node->child = parse_array(input, l);
 						 break;
-		case L_LBRACE: node = create_node(T_OBJECT);
-					   node->child = parse_object(input);
+		case L_LBRACE: node = create_node(T_OBJECT, 0);
+					   node->child = parse_object(input, l);
 					   break;
 		/* no default: */
 	}
@@ -360,8 +379,58 @@ printf("last_lexem == L_LBRACKET, l == L_RBRACKET\n");
 	return node;
 }
 
-node_t *parse_object(const char **input) {
-	return NULL;
+node_t *parse_stream(const char **input);
+
+node_t *parse_object(const char **input, lexem_t previous_lexem) {
+	lexem_t l;
+
+	node_t *node = NULL;
+
+	l = get_next_lexem(input);
+
+	if (previous_lexem == L_LBRACE && l == L_RBRACE) {
+		return NULL;
+	}
+
+	// FIXME:
+	if (previous_lexem != L_COMMA && previous_lexem != L_LBRACE && l != L_RBRACE) {
+		fprintf(stderr, "parse_object: previous_lexem != L_COMMA && previous_lexem != L_LBRACE && l != L_RBRACE.\n");
+		return NULL;
+	}
+
+	expect(l, L_STRING);
+	node = create_node(T_STRING, g_string);
+
+	l = get_next_lexem(input);
+	expect(l, L_COLON);
+
+#if 1
+	l = get_next_lexem(input);
+
+	switch (l) {
+		case L_NULL: node->child = create_node(T_NULL); break;
+		case L_FALSE: node->child = create_node(T_FALSE); break;
+		case L_TRUE: node->child = create_node(T_TRUE); break;
+		case L_NUMBER: node->child = create_node(T_NUMBER, g_number); break;
+		case L_STRING: node->child = create_node(T_STRING, g_string); break;
+		case L_LBRACKET: node->child = create_node(T_ARRAY, 0);
+						 node->child->child = parse_array(input, l);
+						 break;
+		case L_LBRACE: node->child = create_node(T_OBJECT, 0);
+					   node->child->child = parse_object(input, l);
+					   break;
+		/* no default: */
+	}
+#endif
+
+	l = get_next_lexem(input);
+	if (l == L_COMMA) {
+		node->next = parse_object(input, l);
+		return node;
+	}
+
+	expect(l, L_RBRACE);
+	return node;
 }
 
 node_t *parse_stream(const char **input) {
@@ -375,11 +444,11 @@ node_t *parse_stream(const char **input) {
 		case L_TRUE: root = create_node(T_TRUE); break;
 		case L_NUMBER: root = create_node(T_NUMBER, g_number); break;
 		case L_STRING: root = create_node(T_STRING, g_string); break;
-		case L_LBRACKET: root = create_node(T_ARRAY);
+		case L_LBRACKET: root = create_node(T_ARRAY, 0);
 						 root->child = parse_array(input, l);
 						 break;
-		case L_LBRACE: root = create_node(T_OBJECT);
-					   root->child = parse_object(input);
+		case L_LBRACE: root = create_node(T_OBJECT, 0);
+					   root->child = parse_object(input, l);
 					   break;
 		default: fprintf(stderr, "Unexpected lexem %s in input stream.\n", lexem_to_string[l]); exit(EXIT_FAILURE); break;
 	}
@@ -445,6 +514,10 @@ int compare_trees(node_t *t1, node_t *t2) {
 
 	if (t1 == t2) {
 		return 0;
+	}
+
+	if (t1 == NULL && t2 || t1 && t2 == NULL) {
+		return 1;
 	}
 
 	return compare_trees(t1->next, t2->next) || compare_trees(t1->child, t2->child);

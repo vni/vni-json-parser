@@ -52,4 +52,7 @@ extern char *type_to_string[];
 
 node_t *parse_stream(const char **input);
 
+/*** AUXILIARY ***************************************************************************************************/
+node_t *create_node(type_t t, ...);
+
 #endif /* JSON_H */

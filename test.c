@@ -5,6 +5,10 @@
 #include "json.h"
 
 // TODO: test parser. generate the tree from the input string and test it agains generated one
+// TODO: test_number_parser
+// TODO: test_string_parser
+// TODO: test_array_parser
+// TODO: test_object_parser
 
 void test_lexer_numbers(void) {
 	int i;
@@ -263,7 +267,6 @@ void test1(void) {
 	free_tree(root);
 }
 
-/* simple tests for parser */
 void test_parser(void) {
 	int i;
 	int failed_tests = 0;
@@ -273,17 +276,131 @@ void test_parser(void) {
 	struct {
 		const char *input;
 		type_t expected_type;
-		union {
-			const char *str;
-			double num;
-		} u;
+		const char *string;
+		double number;
 	} test_cases[] = {
-		{ " 123 ", T_NUMBER, 123 },
-		{ " true ", T_TRUE, 0 },
-		{ " false ", T_FALSE, 0 },
-		{ " null ", T_NULL, 0 },
-		{ " [] ", T_ARRAY, 0 },
-		{ " {} ", T_OBJECT, 0 }
+		{ " 123 ", T_NUMBER, "", 123 },
+		{ " true ", T_TRUE, "", 0 },
+		{ " false ", T_FALSE, "", 0 },
+		{ " null ", T_NULL, "", 0 },
+		{ " \"null\" ", T_STRING, "null", 0 },
+		{ " \"nu \\n ll\" ", T_STRING, "nu \n ll", 0 },
+		{ " \"value: \\u0024. here\" ", T_STRING, "value: $. here", 0 },
+		//{ " \"value: \\u0024. here\" ", T_STRING, "value: *. here", 0 }, //INVALID
+	};
+
+	for (i = 0; i < sizeof(test_cases)/sizeof(test_cases[0]); ++i) {
+		p = &test_cases[i].input;
+		root = parse_stream(p);
+
+		if (root->type != test_cases[i].expected_type) {
+			fprintf(stderr, "root->type (%s) != expected_type (%s).\n", type_to_string[root->type], type_to_string[test_cases[i].expected_type]);
+			failed_tests++;
+		} else if (root->type == T_NUMBER && root->u.number != test_cases[i].number) {
+			fprintf(stderr, "root->type (%s) value (%s) != expected value (%s).\n", type_to_string[root->type], root->u.number, test_cases[i].number);
+			failed_tests++;
+		} else if (root->type == T_STRING && strcmp(root->u.string, test_cases[i].string) != 0) {
+			fprintf(stderr, "root->type (%s) value (%s) != expected value (%s).\n", type_to_string[root->type], root->u.string, test_cases[i].string);
+			failed_tests++;
+		}
+
+		free_tree(root);
+	}
+
+	if (failed_tests) {
+		printf("test_parser. Failed %d tests.\n", failed_tests);
+	} else {
+		printf("test_parser. All tests are PASSED.\n");
+	}
+}
+
+void test_parser_array1(void) {
+	const char *input = "[1]";
+	const char **p = &input;
+
+	node_t *expected_tree;
+	expected_tree = create_node(T_ARRAY, 0);
+	expected_tree->child = create_node(T_NUMBER, 1);
+
+	node_t *root = parse_stream(p);
+	if (compare_trees(root, expected_tree)) {
+		printf("test_parser_array1. Test FAILED.\n");
+	} else {
+		printf("test_parser_array1. Test is PASSED.\n");
+	}
+
+	free_tree(expected_tree);
+	free_tree(root);
+}
+
+void test_parser_array2(void) {
+	const char *input = "[1  ,           2, \"how are you?\", true, false, null, 10]";
+	const char **p = &input;
+
+	node_t *expected_tree;
+	expected_tree = create_node(T_ARRAY, 0);
+	expected_tree->child = create_node(T_NUMBER, 1);
+	expected_tree->child->next = create_node(T_NUMBER, 2);
+	expected_tree->child->next->next = create_node(T_STRING, "how are you?");
+	expected_tree->child->next->next->next = create_node(T_TRUE);
+	expected_tree->child->next->next->next->next = create_node(T_FALSE);
+	expected_tree->child->next->next->next->next->next = create_node(T_NULL);
+	expected_tree->child->next->next->next->next->next->next = create_node(T_NUMBER, 10);
+
+	node_t *root = parse_stream(p);
+	if (compare_trees(root, expected_tree)) {
+		printf("test_parser_array2. Test FAILED.\n");
+	} else {
+		printf("test_parser_array2. Test is PASSED.\n");
+	}
+
+	free_tree(expected_tree);
+	free_tree(root);
+}
+
+void test_parser_array3(void) {
+	const char *input = "[1  ,           2, \"how are you?\", true, [true, true, 666], false, null, 10]";
+	const char **p = &input;
+
+	node_t *expected_tree;
+	expected_tree = create_node(T_ARRAY, 0);
+	expected_tree->child = create_node(T_NUMBER, 1);
+	expected_tree->child->next = create_node(T_NUMBER, 2);
+	expected_tree->child->next->next = create_node(T_STRING, "how are you?");
+	expected_tree->child->next->next->next = create_node(T_TRUE);
+	expected_tree->child->next->next->next->next = create_node(T_ARRAY, 0);
+	expected_tree->child->next->next->next->next->child = create_node(T_TRUE);
+	expected_tree->child->next->next->next->next->child->next = create_node(T_TRUE);
+	expected_tree->child->next->next->next->next->child->next->next = create_node(T_NUMBER, 666);
+	expected_tree->child->next->next->next->next->next = create_node(T_FALSE);
+	expected_tree->child->next->next->next->next->next->next = create_node(T_NULL);
+	expected_tree->child->next->next->next->next->next->next->next = create_node(T_NUMBER, 10);
+
+	node_t *root = parse_stream(p);
+	if (compare_trees(root, expected_tree)) {
+		printf("test_parser_array3. Test FAILED.\n");
+	} else {
+		printf("test_parser_array3. Test is PASSED.\n");
+	}
+
+	free_tree(expected_tree);
+	free_tree(root);
+}
+
+/* simple tests for parser */
+void test_parser_array(void) {
+	int i;
+	int failed_tests = 0;
+	node_t *root;
+	const char **p;
+
+	struct {
+		const char *input;
+		type_t expected_type;
+		/*node_t *root;*/
+	} test_cases[] = {
+		{ " [] ", T_ARRAY },
+		{ " [1] ", T_ARRAY },
 	};
 
 	for (i = 0; i < sizeof(test_cases)/sizeof(test_cases[0]); ++i) {
@@ -299,21 +416,144 @@ void test_parser(void) {
 	}
 
 	if (failed_tests) {
-		printf("test_parser. Failed %d tests.\n", failed_tests);
+		printf("test_parser_array. Failed %d tests.\n", failed_tests);
 	} else {
-		printf("test_parser. All tests are PASSED.\n");
+		printf("test_parser_array. All tests are PASSED.\n");
 	}
+}
+
+void test_parser_object(void) {
+	int i;
+	int failed_tests = 0;
+	node_t *root;
+	const char **p;
+
+	struct {
+		const char *input;
+		type_t expected_type;
+	} test_cases[] = {
+		{ " {} ", T_OBJECT }
+	};
+
+	for (i = 0; i < sizeof(test_cases)/sizeof(test_cases[0]); ++i) {
+		p = &test_cases[i].input;
+		root = parse_stream(p);
+
+		if (root->type != test_cases[i].expected_type) {
+			fprintf(stderr, "root->type (%s) != expected_type (%s).\n", type_to_string[root->type], type_to_string[test_cases[i].expected_type]);
+			failed_tests++;
+		}
+
+		free_tree(root);
+	}
+
+	if (failed_tests) {
+		printf("test_parser_object. Failed %d tests.\n", failed_tests);
+	} else {
+		printf("test_parser_object. All tests are PASSED.\n");
+	}
+}
+
+void test_parser_object1(void) {
+	const char *input = "{\"name\" : \"John Doe\"}";
+	const char **p = &input;
+
+	node_t *expected_root = create_node(T_OBJECT);
+	expected_root->child = create_node(T_STRING, "name");
+	expected_root->child->child = create_node(T_STRING, "John Doe");
+
+	node_t *root = parse_stream(p);
+
+	if (compare_trees(expected_root, root)) {
+		printf("test_parser_object1. Test FAILED.\n");
+	} else {
+		printf("test_parser_object1. Test is PASSED.\n");
+	}
+
+	free_tree(expected_root);
+	free_tree(root);
+}
+
+void test_parser_object2(void) {
+	const char *input = "{\"name\" : \"John Doe\", \"one\"   : 1111, \"two\"  :\n2222}";
+	const char **p = &input;
+
+	node_t *expected_root = create_node(T_OBJECT);
+	expected_root->child = create_node(T_STRING, "name");
+	expected_root->child->child = create_node(T_STRING, "John Doe");
+	expected_root->child->next = create_node(T_STRING, "one");
+	expected_root->child->next->child = create_node(T_NUMBER, 1111);
+	expected_root->child->next->next = create_node(T_STRING, "two");
+	expected_root->child->next->next->child = create_node(T_NUMBER, 2222);
+
+	node_t *root = parse_stream(p);
+
+	if (compare_trees(expected_root, root)) {
+		printf("test_parser_object2. Test FAILED.\n");
+	} else {
+		printf("test_parser_object2. Test is PASSED.\n");
+	}
+
+	free_tree(expected_root);
+	free_tree(root);
+}
+
+void test_parser_object3(void) {
+	const char *input = "{\"name\" : \"John Doe\", \"inner\"  : { \"i1\": 100, \"i2:\":200, \"i3\":{\"ii1\":1111}}}";
+	const char **p = &input;
+
+	node_t *expected_root = create_node(T_OBJECT);
+	expected_root->child = create_node(T_STRING, "name");
+	expected_root->child->child = create_node(T_STRING, "John Doe");
+
+	expected_root->child->next = create_node(T_STRING, "inner");
+	expected_root->child->next->child = create_node(T_OBJECT);
+
+	expected_root->child->next->child->child = create_node(T_STRING, "i1");
+	expected_root->child->next->child->child->child = create_node(T_NUMBER, 100);
+
+	expected_root->child->next->child->child->next = create_node(T_STRING, "i2");
+	expected_root->child->next->child->child->next->child = create_node(T_NUMBER, 200);
+
+	expected_root->child->next->child->child->next->next = create_node(T_STRING, "i3");
+	expected_root->child->next->child->child->next->next->child = create_node(T_OBJECT);
+	expected_root->child->next->child->child->next->next->child->child = create_node(T_STRING, "ii1");
+	expected_root->child->next->child->child->next->next->child->child->child = create_node(T_NUMBER, 1111);
+
+	node_t *root = parse_stream(p);
+
+	if (compare_trees(expected_root, root)) {
+		printf("test_parser_object3. Test FAILED.\n");
+	} else {
+		printf("test_parser_object3. Test is PASSED.\n");
+	}
+
+	free_tree(expected_root);
+	free_tree(root);
 }
 
 int main(void) {
 	/* test lexer */
+	printf("Test Lexer:\n");
 	test_lexer();
 	test_lexer_numbers();
 	test_lexer_strings();
 	test_lexem_sequence();
+	printf("\n");
 
 	/* test parser */
+	printf("Test Parser:\n");
 	test_parser();
+	test_parser_array();
+	test_parser_array1();
+	test_parser_array2();
+	test_parser_array3();
+	printf("\n");
+	test_parser_object();
+	test_parser_object1();
+	test_parser_object2();
+	test_parser_object3();
+	printf("\n");
 
 	test1();
 
