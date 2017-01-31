@@ -324,11 +324,8 @@ node_t *create_node(type_t t, ...) {
 		case T_ARRAY: {
 			va_list args;
 			va_start(args, t);
-			int nelems = va_arg(args, int);
-			int i;
 			node_t **node = &n->child;
-			for (i = 0; i < nelems; ++i) {
-				*node = va_arg(args, node_t *);
+			while ((*node = va_arg(args, node_t *)) != NULL) {
 				node = &(*node)->next;
 			}
 			va_end(args);
@@ -337,14 +334,15 @@ node_t *create_node(type_t t, ...) {
 		case T_OBJECT: {
 			va_list args;
 			va_start(args, t);
-			int nelems = va_arg(args, int);
-			int i;
+
 			node_t **node = &n->child;
-			for (i = 0; i < nelems; ++i) {
-				(*node) = create_node(T_STRING, xstrdup(va_arg(args, char *)));
+			const char *key = NULL;
+			while ((key = va_arg(args, const char *)) != NULL) {
+				*node = create_node(T_STRING, xstrdup(key));
 				(*node)->child = va_arg(args, node_t *);
 				node = &(*node)->next;
 			}
+			*node = NULL;
 			va_end(args);
 			break;
 		}

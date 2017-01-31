@@ -43,40 +43,48 @@ void test5(void) {
 }
 
 void test6(void) {
-	node_t *root = create_node(T_ARRAY, 4,
+	node_t *root = create_node(T_ARRAY,
 							   create_node(T_NUMBER, 1.0),
 							   create_node(T_STRING, "two"),
 							   create_node(T_TRUE),
-							   create_node(T_NULL));
+							   create_node(T_NULL),
+							   NULL);
 	printf("test6():\n");
 	dump_out_stream(root);
 	printf("\n");
 }
 
 void test7(void) {
-	node_t *root = create_node(T_OBJECT, 5,
+	node_t *root = create_node(T_OBJECT,
 			                   "one", create_node(T_NUMBER, 1.0),
 							   "two", create_node(T_TRUE),
-							   "three", create_node(T_ARRAY, 3,
+							   "three", create_node(T_ARRAY,
 								                    create_node(T_STRING, "zero"),
 													create_node(T_STRING, "one"),
-													create_node(T_STRING, "two")
+													create_node(T_STRING, "two"),
+													NULL
 												    ),
-							   "four", create_node(T_OBJECT, 2,
+							   "four", create_node(T_OBJECT,
 								                   "address", create_node(T_STRING, "Zhukova 47a"),
-												   "age", create_node(T_NUMBER, 27.0)
+												   "age", create_node(T_NUMBER, 27.0),
+												   NULL
 												   ),
-							   "five", create_node(T_ARRAY, 3,
-								                   create_node(T_OBJECT, 2,
+							   "five", create_node(T_ARRAY,
+								                   create_node(T_OBJECT,
 													           "name", create_node(T_STRING, "Mykola"),
-															   "sex", create_node(T_STRING, "M")),
-								                   create_node(T_OBJECT, 2,
+															   "sex", create_node(T_STRING, "M"),
+															   NULL),
+								                   create_node(T_OBJECT,
 													           "name", create_node(T_STRING, "Olenjka"),
-															   "sex", create_node(T_STRING, "F")),
-								                   create_node(T_OBJECT, 2,
+															   "sex", create_node(T_STRING, "F"),
+															   NULL),
+								                   create_node(T_OBJECT,
 													           "name", create_node(T_STRING, "Beljchenochek"),
-															   "sex", create_node(T_STRING, "F"))
-												   )
+															   "sex", create_node(T_STRING, "F"),
+															   NULL),
+												   NULL
+												   ),
+							   NULL
 			                   );
 	printf("test7():\n");
 	dump_out_stream(root);

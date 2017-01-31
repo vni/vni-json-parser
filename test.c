@@ -341,7 +341,7 @@ void test_parser_array1(void) {
 	const char **p = &input;
 
 	node_t *expected_tree;
-	expected_tree = create_node(T_ARRAY, 1, create_node(T_NUMBER, 1));
+	expected_tree = create_node(T_ARRAY, create_node(T_NUMBER, 1), NULL);
 
 	node_t *root = parse_stream(p);
 	if (compare_trees(root, expected_tree)) {
@@ -358,14 +358,15 @@ void test_parser_array2(void) {
 	const char *input = "[1  ,           2, \"how are you?\", true, false, null, 10]";
 	const char **p = &input;
 
-	node_t *expected_tree = create_node(T_ARRAY, 7,
+	node_t *expected_tree = create_node(T_ARRAY,
 										create_node(T_NUMBER, 1),
 										create_node(T_NUMBER, 2),
 										create_node(T_STRING, "how are you?"),
 										create_node(T_TRUE),
 										create_node(T_FALSE),
 										create_node(T_NULL),
-										create_node(T_NUMBER, 10.0));;
+										create_node(T_NUMBER, 10.0),
+										NULL);;
 
 	node_t *root = parse_stream(p);
 	if (compare_trees(root, expected_tree)) {
@@ -382,19 +383,21 @@ void test_parser_array3(void) {
 	const char *input = "[1  ,           2, \"how are you?\", true, [true, true, 666], false, null, 10]";
 	const char **p = &input;
 
-	node_t *expected_tree = create_node(T_ARRAY, 8,
+	node_t *expected_tree = create_node(T_ARRAY,
 										create_node(T_NUMBER, 1),
 										create_node(T_NUMBER, 2),
 										create_node(T_STRING, "how are you?"),
 										create_node(T_TRUE),
-										create_node(T_ARRAY, 3,
+										create_node(T_ARRAY,
 													create_node(T_TRUE),
 													create_node(T_TRUE),
-													create_node(T_NUMBER, 666.0)
+													create_node(T_NUMBER, 666.0),
+													NULL
 										),
 										create_node(T_FALSE),
 										create_node(T_NULL),
-										create_node(T_NUMBER, 10.0)
+										create_node(T_NUMBER, 10.0),
+										NULL
 							);
 	/*
 	expected_tree = create_node(T_ARRAY, 0);
@@ -494,8 +497,9 @@ void test_parser_object1(void) {
 	const char **p = &input;
 
 	//node_t *expected_root = create_node(T_OBJECT, 0);
-	node_t *expected_root = create_node(T_OBJECT, 1,
-		                              	"name", create_node(T_STRING, "John Doe"));
+	node_t *expected_root = create_node(T_OBJECT,
+		                              	"name", create_node(T_STRING, "John Doe"),
+										NULL);
 	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
@@ -517,10 +521,11 @@ void test_parser_object2(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"one\"   : 1111, \"two\"  :\n2222}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT, 3,
+	node_t *expected_root = create_node(T_OBJECT,
 			                            "name", create_node(T_STRING, "John Doe"),
 			                            "one", create_node(T_NUMBER, 1111.0),
-										"two", create_node(T_NUMBER, 2222.0));
+										"two", create_node(T_NUMBER, 2222.0),
+										NULL);
 	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	expected_root->child = create_node(T_STRING, "name");
 	expected_root->child->child = create_node(T_STRING, "John Doe");
@@ -546,13 +551,16 @@ void test_parser_object3(void) {
 	const char *input = "{\"name\" : \"John Doe\", \"inner\"  : { \"i1\": 100, \"i2:\":200, \"i3\":{\"ii1\":1111}}}";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_OBJECT, 2,
+	node_t *expected_root = create_node(T_OBJECT,
 			                            "name", create_node(T_STRING, "John Doe"),
-										"inner", create_node(T_OBJECT, 3,
+										"inner", create_node(T_OBJECT,
 											                  "i1", create_node(T_NUMBER, 100.0),
 															  "i2", create_node(T_NUMBER, 200.0),
-															  "i3", create_node(T_OBJECT, 1,
-																                "ii1", create_node(T_NUMBER, 1111.0))));
+															  "i3", create_node(T_OBJECT,
+																                "ii1", create_node(T_NUMBER, 1111.0),
+																				NULL),
+															  NULL),
+										NULL);
 	/** unneeded, but let it be an example of how create_node(T_OBJECT, 0) can be used *
 	node_t *expected_root = create_node(T_OBJECT, 0);
 	expected_root->child = create_node(T_STRING, "name");
@@ -589,33 +597,39 @@ void test_parser_mixed(void) {
 	const char *input = "[\"one\", 2, true, {\"four\":44, \"five\":[1,2,3,4,5], \"six\":[1,2,{},4,[5]]}, [90, 88]]";
 	const char **p = &input;
 
-	node_t *expected_root = create_node(T_ARRAY, 5,
+	node_t *expected_root = create_node(T_ARRAY,
 			                            create_node(T_STRING, "one"),
 										create_node(T_NUMBER, 2.0),
 										create_node(T_TRUE),
-										create_node(T_OBJECT, 3,
+										create_node(T_OBJECT,
 											        "four", create_node(T_NUMBER, 44.0),
-													"five", create_node(T_ARRAY, 5,
+													"five", create_node(T_ARRAY,
 														                create_node(T_NUMBER, 1.0),
 														                create_node(T_NUMBER, 2.0),
 														                create_node(T_NUMBER, 3.0),
 														                create_node(T_NUMBER, 4.0),
-														                create_node(T_NUMBER, 5.0)
+														                create_node(T_NUMBER, 5.0),
+																		NULL
 													),
-													"six", create_node(T_ARRAY, 5,
+													"six", create_node(T_ARRAY,
 														               create_node(T_NUMBER, 1.0),
 														               create_node(T_NUMBER, 2.0),
 														               create_node(T_OBJECT, 0),
 														               create_node(T_NUMBER, 4.0),
-														               create_node(T_ARRAY, 1,
-																				   create_node(T_NUMBER, 5.0)
-																	   )
-												    )
+														               create_node(T_ARRAY,
+																				   create_node(T_NUMBER, 5.0),
+																				   NULL
+																	   ),
+																	   NULL
+												    ),
+													NULL
 									    ),
-									    create_node(T_ARRAY, 2,
+									    create_node(T_ARRAY,
 												    create_node(T_NUMBER, 90.0),
-												    create_node(T_NUMBER, 88.0)
-										)
+												    create_node(T_NUMBER, 88.0),
+													NULL
+										),
+										NULL
 							);
 
 	node_t *root = parse_stream(p);
