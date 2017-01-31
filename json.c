@@ -1,5 +1,4 @@
 // FIXME: Added doxygen documentation to all the functions
-// TODO: make create_node(T_NUMBER, XXX) correctly receives double converted from int
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +52,32 @@ char *xstrdup(const char *s) {
 }
 
 /******************************************************************************************/
-/*** Lexer ********************************************************************************/
+/*** LEXER ********************************************************************************/
+/******************************************************************************************/
+
+typedef enum lexem {
+	L_END,
+	L_INVALID,
+	L_INVALID_STRING,
+	L_STRING_TOO_BIG,
+	L_COMMA,
+	L_COLON,
+	L_NULL,
+	L_TRUE,
+	L_FALSE,
+	L_NUMBER,
+	L_STRING,
+	L_LBRACKET,
+	L_RBRACKET,
+	L_LBRACE,
+	L_RBRACE
+} lexem_t;
+
+lexem_t get_next_lexem(const char **input);
+extern double g_number;
+extern char g_string[];
+extern char *lexem_to_string[];
+
 
 #define MAX_STRING_LEXEM_LEN 2048
 
@@ -260,7 +284,7 @@ char *lexem_to_string[] = {
 /******************************************************************************************/
 /*** Parser *******************************************************************************/
 
-char *type_to_string[] = {
+const char *type_to_string[] = {
 	"T_NULL",
 	"T_FALSE",
 	"T_TRUE",
@@ -524,7 +548,7 @@ void dump_tree(node_t *root, int indent) {
  * Return !0 if they are differ.
  */
 int compare_trees(node_t *t1, node_t *t2) {
-	if (t1 == NULL && t2 == NULL) {
+	if ((t1 == NULL) && (t2 == NULL)) {
 		return 0;
 	}
 
@@ -532,7 +556,7 @@ int compare_trees(node_t *t1, node_t *t2) {
 		return 0;
 	}
 
-	if (t1 == NULL && t2 || t1 && t2 == NULL) {
+	if ((t1 == NULL) && (t2 || t1) && (t2 == NULL)) {
 		return 1;
 	}
 
@@ -560,6 +584,120 @@ void process_stream(const char **input) {
 				printf("%s\n", lexem_to_string[l]);
 			}
 		}
+}
+
+/************************************************************************************************/
+
+void dump_out_stream(node_t *);
+void dump_out_object(node_t *);
+
+void dump_out_array(node_t *p) {
+	while (p) {
+		switch (p->type) {
+			case T_NULL:
+				printf("null");
+				break;
+			case T_FALSE:
+				printf("false");
+				break;
+			case T_TRUE:
+				printf("true");
+				break;
+			case T_STRING:
+				printf("\"%s\"", p->u.string);
+				break;
+			case T_NUMBER:
+				printf("%g", p->u.number);
+				break;
+			case T_ARRAY:
+				printf("[");
+				dump_out_array(p->child);
+				printf("]");
+				break;
+			case T_OBJECT:
+				printf("{");
+				dump_out_object(p->child);
+				printf("}");
+				break;
+		}
+
+		if (p->next) {
+			printf(",");
+		}
+
+		p = p->next;
+	}
+}
+
+void dump_out_object(node_t *p) {
+	while (p) {
+		printf("\"%s\":", p->u.string);
+		node_t *pp = p->child;
+
+		switch (pp->type) {
+			case T_NULL:
+				printf("null");
+				break;
+			case T_FALSE:
+				printf("false");
+				break;
+			case T_TRUE:
+				printf("true");
+				break;
+			case T_STRING:
+				printf("\"%s\"", pp->u.string);
+				break;
+			case T_NUMBER:
+				printf("%g", pp->u.number);
+				break;
+			case T_ARRAY:
+				printf("[");
+				dump_out_array(pp->child);
+				printf("]");
+				break;
+			case T_OBJECT:
+				printf("{");
+				dump_out_object(pp->child);
+				printf("}");
+				break;
+		}
+
+		if (p->next) {
+			printf(",");
+		}
+
+		p = p->next;
+	}
+}
+
+void dump_out_stream(node_t *p) {
+	switch (p->type) {
+		case T_NULL:
+			printf("null");
+			break;
+		case T_FALSE:
+			printf("false");
+			break;
+		case T_TRUE:
+			printf("true");
+			break;
+		case T_STRING:
+			printf("\"%s\"", p->u.string);
+			break;
+		case T_NUMBER:
+			printf("%g", p->u.number);
+			break;
+		case T_ARRAY:
+			printf("[");
+			dump_out_array(p->child);
+			printf("]");
+			break;
+		case T_OBJECT:
+			printf("{");
+			dump_out_object(p->child);
+			printf("}");
+			break;
+	}
 }
 
 #ifndef ENABLE_TESTS

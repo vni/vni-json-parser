@@ -1,10 +1,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <assert.h>
 #include "json.h"
 
-// TODO: test_object_parser: create_node(T_OBJECT, ...) should also be able to accept node tree
+/*** LEXER interface *********************************************************************************************/
+
+typedef enum lexem {
+	L_END,
+	L_INVALID,
+	L_INVALID_STRING,
+	L_STRING_TOO_BIG,
+	L_COMMA,
+	L_COLON,
+	L_NULL,
+	L_TRUE,
+	L_FALSE,
+	L_NUMBER,
+	L_STRING,
+	L_LBRACKET,
+	L_RBRACKET,
+	L_LBRACE,
+	L_RBRACE
+} lexem_t;
+
+lexem_t get_next_lexem(const char **input);
+extern double g_number;
+extern char g_string[];
+extern char *lexem_to_string[];
+
+/*** LEXER tests *************************************************************************************************/
 
 void test_lexer_numbers(void) {
 	int i;
